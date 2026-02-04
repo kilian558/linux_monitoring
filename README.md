@@ -25,5 +25,7 @@ Ein Discord Bot, der Live-Systeminformationen (CPU, RAM, Swap, Netzwerk) ausgibt
 - Stop: `pm2 stop linux-monitor-bot`
 - Autostart aktivieren: `pm2 startup` und danach `pm2 save`
 
+Hinweis: `pm2` lädt die `.env` automatisch über `env_file` in der Konfiguration.
+
 ## Bot-Befehl
 - `!monitor`
