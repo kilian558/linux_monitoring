@@ -18,6 +18,8 @@ Ein Discord Bot, der Live-Systeminformationen (CPU, RAM, Swap, Netzwerk) ausgibt
    - In der `.env` Datei `DISCORD_TOKEN` eintragen
    - Optional `COMMAND_PREFIX` anpassen
    - Optional `CHANNEL_ID` setzen (Ziel-Channel für die Ausgabe)
+   - Optional `MONITOR_MESSAGE_ID` setzen (Nachricht, die aktualisiert werden soll)
+   - Optional `UPDATE_INTERVAL` setzen (Sekunden, Standard: 30)
 
 ## Start mit pm2
 - Start: `pm2 start ecosystem.config.js`
@@ -30,3 +32,8 @@ Hinweis: `pm2` lädt die `.env` automatisch über `env_file` in der Konfiguratio
 
 ## Bot-Befehl
 - `!monitor`
+
+## Auto-Update (Embed)
+Wenn `CHANNEL_ID` gesetzt ist, postet der Bot automatisch ein Embed im Ziel-Channel
+und aktualisiert es alle `UPDATE_INTERVAL` Sekunden. Wenn du eine bestehende Nachricht
+aktualisieren willst, setze `MONITOR_MESSAGE_ID` auf die Message-ID.
