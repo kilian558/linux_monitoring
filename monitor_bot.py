@@ -4,10 +4,14 @@ from datetime import datetime
 
 import discord
 from discord.ext import commands
+from dotenv import load_dotenv
 import psutil
+
+load_dotenv()
 
 TOKEN = os.getenv("DISCORD_TOKEN")
 COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", "!")
+CHANNEL_ID = os.getenv("CHANNEL_ID")
 
 INTENTS = discord.Intents.default()
 BOT = commands.Bot(command_prefix=COMMAND_PREFIX, intents=INTENTS)
@@ -98,7 +102,22 @@ async def monitor_command(ctx: commands.Context):
     lines.append(datetime.now().strftime("heute um %H:%M Uhr"))
 
     message = "\n".join(lines)
-    await ctx.send(message)
+
+    if CHANNEL_ID:
+        try:
+            target_id = int(CHANNEL_ID)
+        except ValueError:
+            await ctx.send("Ungültige CHANNEL_ID in der Umgebung.")
+            return
+
+        channel = BOT.get_channel(target_id)
+        if channel is None:
+            channel = await BOT.fetch_channel(target_id)
+        await channel.send(message)
+        if ctx.channel.id != target_id:
+            await ctx.send("Monitoring wurde im Ziel-Channel gepostet.")
+    else:
+        await ctx.send(message)
 
 
 @BOT.event

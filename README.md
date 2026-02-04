@@ -14,8 +14,9 @@ Ein Discord Bot, der Live-Systeminformationen (CPU, RAM, Swap, Netzwerk) ausgibt
 2. Abhängigkeiten installieren:
    `pip install -r requirements.txt`
 3. Bot-Token setzen:
-   - In [ecosystem.config.js](ecosystem.config.js) unter `env.DISCORD_TOKEN` eintragen
+   - In der `.env` Datei `DISCORD_TOKEN` eintragen
    - Optional `COMMAND_PREFIX` anpassen
+   - Optional `CHANNEL_ID` setzen (Ziel-Channel für die Ausgabe)
 
 ## Start mit pm2
 - Start: `pm2 start ecosystem.config.js`

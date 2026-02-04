@@ -6,7 +6,8 @@ module.exports = {
       interpreter: "python3",
       env: {
         DISCORD_TOKEN: "",
-        COMMAND_PREFIX: "!"
+        COMMAND_PREFIX: "!",
+        CHANNEL_ID: ""
       }
     }
   ]
