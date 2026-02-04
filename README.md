@@ -7,6 +7,7 @@ Ein Discord Bot, der Live-Systeminformationen (CPU, RAM, Swap, Netzwerk) ausgibt
 - Git
 - Node.js + npm
 - pm2 (`npm i -g pm2`)
+- Discord Bot mit aktivierter "Message Content Intent" im Developer Portal
 
 ## Installation
 1. Repo klonen:

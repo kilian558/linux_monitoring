@@ -14,6 +14,7 @@ COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", "!")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 
 INTENTS = discord.Intents.default()
+INTENTS.message_content = True
 BOT = commands.Bot(command_prefix=COMMAND_PREFIX, intents=INTENTS)
 
 _last_net = None
