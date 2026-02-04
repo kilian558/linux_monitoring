@@ -7,9 +7,7 @@ module.exports = {
       cwd: __dirname,
       env_file: ".env",
       env: {
-        DISCORD_TOKEN: "",
-        COMMAND_PREFIX: "!",
-        CHANNEL_ID: ""
+        COMMAND_PREFIX: "!"
       }
     }
   ]
