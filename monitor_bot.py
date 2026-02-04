@@ -1,4 +1,5 @@
 import asyncio
+import json
 import os
 from datetime import datetime
 
@@ -13,7 +14,8 @@ TOKEN = os.getenv("DISCORD_TOKEN")
 COMMAND_PREFIX = os.getenv("COMMAND_PREFIX", "!")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
 MONITOR_MESSAGE_ID = os.getenv("MONITOR_MESSAGE_ID")
-UPDATE_INTERVAL = int(os.getenv("UPDATE_INTERVAL", "30"))
+UPDATE_INTERVAL = int(os.getenv("UPDATE_INTERVAL", "10"))
+MESSAGE_ID_FILE = os.getenv("MESSAGE_ID_FILE", "monitor_message.json")
 
 INTENTS = discord.Intents.default()
 INTENTS.message_content = True
@@ -35,6 +37,27 @@ def _gb(value: float) -> str:
 
 def _mbps(bytes_per_sec: float) -> str:
     return f"{(bytes_per_sec * 8) / 1_000_000:.2f} MBit/s"
+
+
+def _load_message_id() -> str | None:
+    if MONITOR_MESSAGE_ID:
+        return MONITOR_MESSAGE_ID
+    if not os.path.exists(MESSAGE_ID_FILE):
+        return None
+    try:
+        with open(MESSAGE_ID_FILE, "r", encoding="utf-8") as handle:
+            data = json.load(handle)
+        return str(data.get("message_id")) if data.get("message_id") else None
+    except (OSError, json.JSONDecodeError):
+        return None
+
+
+def _save_message_id(message_id: int) -> None:
+    try:
+        with open(MESSAGE_ID_FILE, "w", encoding="utf-8") as handle:
+            json.dump({"message_id": message_id}, handle)
+    except OSError:
+        pass
 
 
 def _net_speeds() -> tuple[float, float]:
@@ -78,7 +101,6 @@ def _build_embed(stats: dict) -> discord.Embed:
         title="🖥 Monitoring Linux VM",
         description="Live-Systeminformationen",
         color=discord.Color.blue(),
-        timestamp=datetime.now(),
     )
 
     embed.add_field(
@@ -108,6 +130,26 @@ def _build_embed(stats: dict) -> discord.Embed:
 
     net_text = f"↓ {_mbps(stats['down_bps'])} | ↑ {_mbps(stats['up_bps'])}"
     embed.add_field(name="🌐 Netzwerk", value=net_text, inline=False)
+
+    boot_time = datetime.fromtimestamp(psutil.boot_time())
+    uptime = datetime.now() - boot_time
+    uptime_text = str(uptime).split(".")[0]
+
+    try:
+        load1, load5, load15 = os.getloadavg()
+        load_text = f"{load1:.2f}, {load5:.2f}, {load15:.2f}"
+    except OSError:
+        load_text = "n/a"
+
+    disk = psutil.disk_usage("/")
+    disk_text = (
+        f"Genutzt: {_gb(disk.used)} / Frei: {_gb(disk.free)} / Total: {_gb(disk.total)}\n"
+        f"Auslastung: {_bar(disk.percent)} {disk.percent:.2f}%"
+    )
+
+    embed.add_field(name="💾 Disk (/)", value=disk_text, inline=False)
+    embed.add_field(name="⏱️ Uptime", value=uptime_text, inline=True)
+    embed.add_field(name="📈 Load (1/5/15)", value=load_text, inline=True)
 
     embed.set_footer(text=datetime.now().strftime("heute um %H:%M Uhr"))
     return embed
@@ -151,17 +193,18 @@ async def monitor_loop():
     embed = _build_embed(stats)
 
     message = None
-    if MONITOR_MESSAGE_ID:
+    message_id_str = _load_message_id()
+    if message_id_str:
         try:
-            message_id = int(MONITOR_MESSAGE_ID)
-            message = await channel.fetch_message(message_id)
+            message = await channel.fetch_message(int(message_id_str))
         except (ValueError, discord.NotFound, discord.Forbidden, discord.HTTPException):
             message = None
 
     if message:
         await message.edit(embed=embed)
     else:
-        await channel.send(embed=embed)
+        new_message = await channel.send(embed=embed)
+        _save_message_id(new_message.id)
 
 
 @BOT.event
