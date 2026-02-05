@@ -185,26 +185,39 @@ async def monitor_command(ctx: commands.Context):
 
 @tasks.loop(seconds=UPDATE_INTERVAL)
 async def monitor_loop():
-    channel = await _get_target_channel()
-    if channel is None:
-        return
+    try:
+        channel = await _get_target_channel()
+        if channel is None:
+            return
 
-    stats = await _gather_stats()
-    embed = _build_embed(stats)
+        stats = await _gather_stats()
+        embed = _build_embed(stats)
 
-    message = None
-    message_id_str = _load_message_id()
-    if message_id_str:
-        try:
-            message = await channel.fetch_message(int(message_id_str))
-        except (ValueError, discord.NotFound, discord.Forbidden, discord.HTTPException):
-            message = None
+        message = None
+        message_id_str = _load_message_id()
+        if message_id_str:
+            try:
+                message = await channel.fetch_message(int(message_id_str))
+            except (ValueError, discord.NotFound, discord.Forbidden, discord.HTTPException):
+                message = None
 
-    if message:
-        await message.edit(embed=embed)
-    else:
-        new_message = await channel.send(embed=embed)
-        _save_message_id(new_message.id)
+        if message:
+            await message.edit(embed=embed)
+        else:
+            new_message = await channel.send(embed=embed)
+            _save_message_id(new_message.id)
+    except Exception as exc:
+        print(f"monitor_loop error: {exc!r}")
+
+
+@monitor_loop.before_loop
+async def _before_monitor_loop():
+    await BOT.wait_until_ready()
+
+
+@monitor_loop.error
+async def _monitor_loop_error(exc: BaseException):
+    print(f"monitor_loop stopped: {exc!r}")
 
 
 @BOT.event
