@@ -1,6 +1,7 @@
 import asyncio
 import json
 import os
+import time
 from datetime import datetime
 
 import discord
@@ -23,6 +24,7 @@ BOT = commands.Bot(command_prefix=COMMAND_PREFIX, intents=INTENTS)
 
 _last_net = None
 _last_net_time = None
+_last_update_ts = None
 
 
 def _bar(percent: float, length: int = 10) -> str:
@@ -80,8 +82,8 @@ def _net_speeds() -> tuple[float, float]:
 
 
 async def _gather_stats():
-    cpu_total = await asyncio.to_thread(psutil.cpu_percent, 1.0)
-    cpu_per_core = await asyncio.to_thread(psutil.cpu_percent, 1.0, True)
+    cpu_total = psutil.cpu_percent(interval=None)
+    cpu_per_core = psutil.cpu_percent(interval=None, percpu=True)
     mem = psutil.virtual_memory()
     swap = psutil.swap_memory()
     down_bps, up_bps = _net_speeds()
@@ -155,6 +157,18 @@ def _build_embed(stats: dict) -> discord.Embed:
     return embed
 
 
+async def _retry_http(coro_factory, attempts: int = 3, base_delay: float = 1.0):
+    last_exc = None
+    for attempt in range(attempts):
+        try:
+            return await coro_factory()
+        except discord.HTTPException as exc:
+            last_exc = exc
+            await asyncio.sleep(base_delay * (2 ** attempt))
+    if last_exc:
+        raise last_exc
+
+
 async def _get_target_channel():
     if not CHANNEL_ID:
         return None
@@ -202,10 +216,13 @@ async def monitor_loop():
                 message = None
 
         if message:
-            await message.edit(embed=embed)
+            await _retry_http(lambda: message.edit(embed=embed))
         else:
-            new_message = await channel.send(embed=embed)
-            _save_message_id(new_message.id)
+            new_message = await _retry_http(lambda: channel.send(embed=embed))
+            if new_message:
+                _save_message_id(new_message.id)
+        global _last_update_ts
+        _last_update_ts = time.time()
     except Exception as exc:
         print(f"monitor_loop error: {exc!r}")
 
@@ -220,11 +237,32 @@ async def _monitor_loop_error(exc: BaseException):
     print(f"monitor_loop stopped: {exc!r}")
 
 
+@tasks.loop(seconds=60)
+async def watchdog_loop():
+    if not monitor_loop.is_running():
+        print("watchdog: monitor_loop not running, restarting")
+        monitor_loop.start()
+        return
+    if _last_update_ts is None:
+        return
+    if time.time() - _last_update_ts > max(120, UPDATE_INTERVAL * 6):
+        print("watchdog: monitor_loop stale, restarting")
+        monitor_loop.cancel()
+        monitor_loop.start()
+
+
+@watchdog_loop.before_loop
+async def _before_watchdog_loop():
+    await BOT.wait_until_ready()
+
+
 @BOT.event
 async def on_ready():
     print(f"Eingeloggt als {BOT.user}")
     if CHANNEL_ID and not monitor_loop.is_running():
         monitor_loop.start()
+    if not watchdog_loop.is_running():
+        watchdog_loop.start()
 
 
 def main():

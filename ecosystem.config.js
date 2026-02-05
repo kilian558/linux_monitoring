@@ -6,6 +6,7 @@ module.exports = {
       interpreter: "python3",
       cwd: __dirname,
       env_file: ".env",
+      cron_restart: "30 4 * * *",
       env: {
         COMMAND_PREFIX: "!"
       }
