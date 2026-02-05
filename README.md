@@ -23,7 +23,8 @@ Ein Discord Bot, der Live-Systeminformationen (CPU, RAM, Swap, Netzwerk) ausgibt
    - Optional `MESSAGE_ID_FILE` setzen (Datei für gespeicherte Message-ID)
 
 ## Start mit pm2
-- Start: `pm2 start ecosystem.config.js`
+- Start: `pm2 start ecosystem.config.js` (erstellt bei Bedarf `.venv` und installiert Requirements)
+- Falls noetig: `chmod +x run_bot.sh`
 - Logs: `pm2 logs linux-monitor-bot`
 - Neustart: `pm2 restart linux-monitor-bot`
 - Stop: `pm2 stop linux-monitor-bot`
